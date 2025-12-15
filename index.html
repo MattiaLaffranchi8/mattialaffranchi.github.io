@@ -3,22 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gioco dell'Impostore (Vanilla JS SPA)</title>
-    <meta name="description" content="Gioco dell'Impostore, SPA autonoma con HTML, CSS, e Vanilla JavaScript.">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕵️</text></svg>">
+    <title>Impostore Cyber: Multiplayer Client</title>
+    <meta name="description" content="Client multiplayer per il Gioco dell'Impostore, con grafica dark-mode e Vanilla JS. Richiede un server backend (WebSocket) per il funzionamento completo.">
+
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
 
     <style>
-        /* Variabili Globali e Reset */
+        /* Variabili Globali e Tema Cyber Dark */
         :root {
-            --colore-sfondo: #1a1a2e;
-            --colore-principale: #0f3460;
-            --colore-accento: #e94560;
-            --colore-testo: #ffffff;
-            --colore-successo: #00b894;
-            --colore-bordo: #3d5a80;
-            --colore-ombra: rgba(0, 0, 0, 0.4);
-            --font-principale: 'Arial', sans-serif;
-            --spaziatura: 20px;
+            --colore-sfondo-profondo: #0a0a1a;
+            --colore-pannello: #1c1c3a;
+            --colore-accento-impostore: #ff3366; /* Neon Rosso */
+            --colore-accento-cittadino: #33ccff; /* Neon Blu */
+            --colore-testo: #e0e0ff;
+            --colore-bordo: #555588;
+            --colore-ombra: rgba(0, 0, 0, 0.7);
+            --font-principale: 'Orbitron', 'Arial', sans-serif;
+            --spaziatura: 25px;
+            --raggio-bordo: 10px;
         }
 
         * {
@@ -29,7 +31,7 @@
 
         body {
             font-family: var(--font-principale);
-            background-color: var(--colore-sfondo);
+            background-color: var(--colore-sfondo-profondo);
             color: var(--colore-testo);
             min-height: 100vh;
             display: flex;
@@ -38,13 +40,14 @@
             padding: var(--spaziatura);
         }
 
-        /* Contenitore Principale e Schermi */
+        /* Contenitore Principale (Console di Gioco) */
         #app-container {
             width: 100%;
-            max-width: 800px;
-            background-color: var(--colore-principale);
-            border-radius: 12px;
-            box-shadow: 0 10px 30px var(--colore-ombra);
+            max-width: 900px;
+            background-color: var(--colore-pannello);
+            border-radius: var(--raggio-bordo);
+            border: 1px solid var(--colore-bordo);
+            box-shadow: 0 0 40px var(--colore-ombra);
             padding: var(--spaziatura);
             transition: all 0.5s ease-in-out;
         }
@@ -60,121 +63,97 @@
         }
 
         h1 {
-            color: var(--colore-accento);
+            color: var(--colore-accento-impostore);
             margin-bottom: var(--spaziatura);
-            font-size: 2em;
+            font-size: 2.5em;
+            text-shadow: 0 0 10px var(--colore-accento-impostore);
         }
 
         h2 {
+            color: var(--colore-accento-cittadino);
             margin-top: 0;
-            margin-bottom: 10px;
-            font-size: 1.5em;
+            margin-bottom: 15px;
+            font-size: 1.8em;
+            text-shadow: 0 0 5px rgba(51, 204, 255, 0.5);
+        }
+        
+        /* Layout per i pulsanti di Lobby */
+        .lobby-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 30px;
         }
 
-        /* Elementi di Input e Formattazione */
-        select, input[type="text"], button {
-            padding: 10px 15px;
-            border-radius: 6px;
-            border: 1px solid var(--colore-bordo);
-            margin-bottom: 10px;
-            font-size: 1em;
+        /* Elementi di Input e Pulsanti */
+        select, input[type="text"], input[type="number"], button {
+            padding: 12px 20px;
+            border-radius: var(--raggio-bordo);
+            border: 2px solid var(--colore-bordo);
+            margin-bottom: 15px;
+            font-size: 1.1em;
             color: var(--colore-testo);
-            background-color: #2c3e50;
-            transition: background-color 0.3s, border-color 0.3s;
+            background-color: #2a2a4c;
+            font-family: var(--font-principale);
+            transition: all 0.3s ease-in-out;
+            text-transform: uppercase;
         }
 
-        select, input[type="text"] {
+        select, input[type="text"], input[type="number"] {
             width: 100%;
-            max-width: 300px;
+            max-width: 350px;
+            text-align: center;
         }
 
+        /* Stile Pulsante Principale */
         button {
             cursor: pointer;
-            background-color: var(--colore-accento);
-            border: none;
+            background: linear-gradient(90deg, #444477, #666699);
+            border-color: var(--colore-bordo);
+            box-shadow: 0 0 8px rgba(102, 102, 153, 0.5);
             font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 1px;
         }
 
         button:hover:not(:disabled) {
-            background-color: #f07470;
-            transform: translateY(-1px);
+            background: linear-gradient(90deg, #666699, #8888bb);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 102, 153, 0.7);
         }
 
         button:disabled {
-            background-color: #5d6d7e;
+            background-color: #3a3a5c;
+            border-color: #2a2a4c;
             cursor: not-allowed;
-            opacity: 0.7;
+            opacity: 0.6;
+            box-shadow: none;
         }
 
-        /* Stile specifico per i campi di configurazione */
+        /* Gruppi di Configurazione/Lobby */
         .config-gruppo {
             margin-bottom: var(--spaziatura);
+            padding: 15px;
+            background-color: #14142a;
+            border-radius: var(--raggio-bordo);
         }
 
-        #lista-giocatori {
-            display: grid;
-            gap: 10px;
-            margin-top: 15px;
-            padding: 0 20px;
-        }
-        
-        /* Layout Desktop (Griglia) */
-        @media (min-width: 600px) {
-            #lista-giocatori {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            select, input[type="text"] {
-                max-width: 100%; /* Sulla griglia possono usare la colonna intera */
-            }
-        }
-        
-        .nome-input-container {
-            display: flex;
-            align-items: center;
-            background-color: var(--colore-sfondo);
-            border-radius: 6px;
-            padding: 5px;
-        }
-        
-        .nome-input-container input {
-            flex-grow: 1;
-            margin: 0;
-            border: none;
-            background: transparent;
-        }
-        
-        .nome-input-container button {
-            margin: 0 0 0 5px;
-            padding: 5px 10px;
-            background-color: #3d5a80;
-        }
-
-        .nome-input-container button:hover {
-            background-color: #5d6d7e;
-        }
-
-
-        /* Overlay di Offuscamento (Schermo Assegnazione Ruoli) */
+        /* OVERLAY DI RIVELAZIONE RUOLO (Forte effetto Glitch/Offuscamento) */
         #overlay-ruoli {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.95);
-            /* Utilizzo del filtro per un effetto di offuscamento sullo sfondo (se supportato) */
-            backdrop-filter: blur(5px); 
-            -webkit-backdrop-filter: blur(5px);
+            background: rgba(0, 0, 0, 0.98); 
+            backdrop-filter: blur(15px); 
+            -webkit-backdrop-filter: blur(15px);
             z-index: 1000;
             display: none;
             align-items: center;
             justify-content: center;
-            text-align: center;
             padding: var(--spaziatura);
-            transition: opacity 0.4s ease-in-out;
             opacity: 0;
+            transition: opacity 0.5s ease;
         }
 
         #overlay-ruoli.attivo {
@@ -182,91 +161,102 @@
             opacity: 1;
         }
         
-        /* Contenuto dell'Overlay */
         #contenuto-ruolo {
             max-width: 90%;
-            background-color: var(--colore-principale);
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
-            animation: zoomIn 0.5s ease-out;
+            width: 450px;
+            background-color: #000000;
+            border: 3px solid var(--colore-accento-impostore);
+            padding: 40px 30px;
+            border-radius: var(--raggio-bordo);
+            box-shadow: 0 0 30px var(--colore-accento-impostore);
+            animation: consoleScan 0.5s ease-out;
+            text-align: center;
         }
         
-        @keyframes zoomIn {
-            from { transform: scale(0.8); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
+        @keyframes consoleScan {
+            from { transform: scale(0.9) translateY(20px); opacity: 0; }
+            to { transform: scale(1) translateY(0); opacity: 1; }
+        }
+        
+        #ruolo-titolo {
+            font-size: 3em;
+            margin-bottom: 20px;
+            text-transform: uppercase;
         }
 
-        #ruolo-titolo {
-            font-size: 2.5em;
-            margin-bottom: 15px;
+        .role-impostore {
+            color: var(--colore-accento-impostore);
+            text-shadow: 0 0 15px var(--colore-accento-impostore);
+        }
+
+        .role-cittadino {
+            color: var(--colore-accento-cittadino);
+            text-shadow: 0 0 15px var(--colore-accento-cittadino);
         }
 
         #parola-rivelata {
-            font-size: 1.8em;
-            color: var(--colore-successo);
+            font-size: 2em;
             font-weight: bold;
-            margin-top: 10px;
-            margin-bottom: 20px;
-            word-break: break-all;
-        }
-
-        /* Sezione Schermo Gioco (Discussione) */
-        #schermo-gioco {
-            text-align: center;
-        }
-
-        #parola-gioco {
-            font-size: 2.5em;
-            color: var(--colore-successo);
-            margin: 20px 0 30px;
+            padding: 10px;
+            border: 1px dashed var(--colore-testo);
+            display: inline-block;
+            margin: 15px 0;
         }
         
+        /* Schermo Gioco (Discussione) */
+        #parola-gioco {
+            font-size: 3.5em;
+            color: var(--colore-accento-cittadino);
+            text-shadow: 0 0 15px var(--colore-accento-cittadino);
+            margin: 25px 0 35px;
+            animation: pulseText 1.5s infinite alternate;
+        }
+
+        @keyframes pulseText {
+            from { opacity: 0.8; }
+            to { opacity: 1; }
+        }
+
         #timer-gioco {
-            font-size: 3em;
-            color: var(--colore-accento);
+            font-size: 4em;
+            color: var(--colore-accento-impostore);
             font-weight: bold;
-            margin-bottom: 20px;
-            padding: 10px;
-            border: 2px solid var(--colore-accento);
-            border-radius: 8px;
+            margin-bottom: 30px;
+            padding: 10px 20px;
+            border: 4px solid var(--colore-accento-impostore);
+            border-radius: var(--raggio-bordo);
             display: inline-block;
+            box-shadow: 0 0 20px rgba(255, 51, 102, 0.5);
+        }
+        
+        /* Schermo Lobby */
+        #lista-giocatori-lobby {
+            list-style: none;
+            padding: 0;
+            margin-top: 20px;
+        }
+
+        #lista-giocatori-lobby li {
+            font-size: 1.1em;
+            padding: 8px;
+            border-bottom: 1px dotted var(--colore-bordo);
         }
 
         /* Schermo Fine Gioco */
         #schermo-fine-gioco h2 {
-            font-size: 3em;
+            font-size: 3.5em;
             margin-bottom: var(--spaziatura);
-        }
-        
-        #lista-risultati {
-            text-align: left;
-            margin: 20px auto;
-            max-width: 400px;
-            padding: 10px;
-            background-color: var(--colore-sfondo);
-            border-radius: 8px;
-        }
-
-        #lista-risultati li {
-            list-style-type: none;
-            padding: 8px 0;
-            border-bottom: 1px dashed #3d5a80;
-        }
-
-        #lista-risultati li:last-child {
-            border-bottom: none;
         }
 
         .ruolo-impostore {
-            color: var(--colore-accento);
+            color: var(--colore-accento-impostore);
             font-weight: bold;
         }
 
         .ruolo-cittadino {
-            color: var(--colore-successo);
+            color: var(--colore-accento-cittadino);
         }
-
+        
         /* Toast Messages */
         #toast-container {
             position: fixed;
@@ -276,24 +266,17 @@
         }
 
         .toast {
-            background-color: #333;
-            color: white;
-            padding: 10px 15px;
-            border-radius: 4px;
-            margin-bottom: 10px;
-            opacity: 0;
-            transition: opacity 0.3s ease-in-out;
-            box-shadow: 0 4px 12px var(--colore-ombra);
+            background-color: #3a3a5c;
+            color: var(--colore-testo);
+            border-left: 5px solid var(--colore-accento-cittadino);
         }
-
-        .toast.show {
-            opacity: 1;
-        }
-
-        /* Accessibilità: Focus visibile e ARIA */
-        button:focus, select:focus, input:focus {
-            outline: 2px solid var(--colore-accento);
-            outline-offset: 2px;
+        
+        /* Media query per la responsività */
+        @media (max-width: 600px) {
+            h1 { font-size: 2em; }
+            h2 { font-size: 1.5em; }
+            #timer-gioco { font-size: 3em; }
+            .lobby-buttons { flex-direction: column; }
         }
     </style>
 </head>
@@ -301,64 +284,84 @@
 
     <div id="app-container">
         
-        <div id="schermo-config" class="schermo attivo">
-            <h1>🕵️ Configurazione Partita</h1>
+        <div id="schermo-lobby" class="schermo attivo">
+            <h1>:: ACCESSO RETE GIOCO ::</h1>
 
             <div class="config-gruppo">
-                <label for="num-giocatori">Numero Giocatori (3-10):</label>
-                <select id="num-giocatori" aria-label="Seleziona il numero di giocatori"></select>
+                <h2>IDENTITÀ</h2>
+                <input type="text" id="input-nome-giocatore" placeholder="Inserisci il tuo Nickname" maxlength="20" aria-label="Nome giocatore">
             </div>
-
-            <div class="config-gruppo">
-                <label for="num-impostori">Numero Impostori (1-Max):</label>
-                <select id="num-impostori" aria-label="Seleziona il numero di impostori"></select>
+            
+            <div class="lobby-buttons">
+                <button id="btn-crea-stanza" style="background: var(--colore-accento-cittadino); box-shadow: 0 0 10px var(--colore-accento-cittadino);" aria-label="Crea una nuova stanza di gioco">CREA NUOVA STANZA</button>
+                <button id="btn-unisciti-stanza" aria-label="Unisciti a una stanza esistente">UNISCITI A STANZA</button>
             </div>
-
-            <div class="config-gruppo">
-                <h2>Nomi Giocatori</h2>
-                <div id="lista-giocatori" role="list">
-                    </div>
-            </div>
-
-            <button id="btn-inizia-gioco" disabled aria-label="Inizia la partita con le configurazioni attuali">Inizia Gioco</button>
         </div>
 
-        <div id="schermo-assegnazione" class="schermo">
-            <h2>Assegnazione Ruoli</h2>
-            <p id="turno-corrente" aria-live="polite">Turno di: N/D</p>
-            <p>Passa il dispositivo al giocatore indicato e premi il pulsante.</p>
-            <button id="btn-scopri-ruolo" aria-label="Scopri il ruolo segreto">Scopri il Ruolo</button>
+        <div id="schermo-config-attesa" class="schermo">
+            <h2>STANZA: <span id="codice-stanza-display">----</span></h2>
+            
+            <p id="stato-giocatore-lobby" style="margin-bottom: 20px;">[ Seleziona l'opzione qui sotto ]</p>
+
+            <div id="config-host-section" class="config-gruppo" style="display: none;">
+                <h3>[ 01 ] Parametri Partita (HOST)</h3>
+                <label for="num-impostori-host">Numero Impostori:</label>
+                <select id="num-impostori-host" aria-label="Seleziona il numero di impostori"></select>
+                <p>Giocatori Connessi: <span id="num-giocatori-connessi">0</span> / 10</p>
+                <button id="btn-inizia-gioco-host" disabled aria-label="Avvia la partita con i parametri scelti">AVVIA PROTOCOLLO GIOCO</button>
+            </div>
+
+            <div class="config-gruppo">
+                <h3>[ 02 ] Identità Crew Connesse</h3>
+                <ul id="lista-giocatori-lobby" role="list">
+                    <li>In attesa di altri giocatori...</li>
+                </ul>
+            </div>
+        </div>
+
+        <div id="schermo-rivelazione" class="schermo">
+            <h2>TRASMISSIONE RUOLO CRIPTATA</h2>
+            <p style="margin-bottom: 30px;">Decriptazione dati in corso...</p>
+            <button id="btn-mostra-ruolo-personale" style="background: var(--colore-accento-cittadino); box-shadow: 0 0 15px var(--colore-accento-cittadino);" aria-label="Mostra il tuo ruolo segreto">MOSTRA RUOLO PERSONALE</button>
         </div>
 
         <div id="schermo-gioco" class="schermo">
-            <h2>Fase di Discussione</h2>
-            <p>La Parola Segreta è:</p>
+            <h2>FASE DI COMUNICAZIONE</h2>
+            <p style="font-size: 1.1em; color: #aaa;">Parola di riferimento:</p>
             <p id="parola-gioco" aria-live="polite">PAROLA</p>
-            <p>Timer rimanente:</p>
+            
+            <p style="margin-bottom: 10px;">Stato del timer:</p>
             <div id="timer-gioco" role="timer" aria-live="polite">05:00</div>
-            <p>Discussione: <strong>I Cittadini</strong> devono identificare l'Impostore. <strong>L'Impostore</strong> deve fingere di conoscere la parola e non farsi scoprire.</p>
-            <button id="btn-mostra-impostori" aria-label="Termina la discussione e mostra i ruoli">Termina & Riveva Ruoli</button>
+            
+            <p style="font-style: italic; color: #999;">Cittadini: Votate per l'Impostore. Impostore: Rimanete nascosti.</p>
+            <button id="btn-vota" style="margin-top: 30px;" aria-label="Avvia la votazione per l'impostore">AVVIA VOTAZIONE (Simulata)</button>
         </div>
 
         <div id="schermo-fine-gioco" class="schermo">
-            <h2 id="risultato-finale"></h2>
-            <h3>Ruoli finali:</h3>
+            <h2 id="risultato-finale" style="font-size: 3em;"></h2>
+            <h3>RISULTATI IDENTITÀ FINALI:</h3>
             <ul id="lista-risultati" role="list"></ul>
-            <button id="btn-nuova-partita" aria-label="Torna alla configurazione per una nuova partita">Nuova Partita</button>
+            <button id="btn-nuova-partita" style="margin-top: 30px;" aria-label="Torna alla lobby per una nuova partita">NUOVA PARTITA</button>
         </div>
 
     </div>
 
-    <div id="overlay-ruoli" aria-hidden="true">
+    <div id="modal-codice-stanza" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); z-index: 1500; align-items: center; justify-content: center;">
+        <div style="background: var(--colore-pannello); padding: 30px; border-radius: var(--raggio-bordo); border: 2px solid var(--colore-accento-cittadino); box-shadow: 0 0 20px var(--colore-accento-cittadino);">
+            <h3>INSERISCI CODICE STANZA</h3>
+            <input type="text" id="input-codice-stanza" placeholder="XXXX" maxlength="4" style="margin: 15px 0;">
+            <button id="btn-conferma-codice">CONFERMA</button>
+            <button id="btn-annulla-codice" style="background: none; border-color: var(--colore-accento-impostore);">ANNULLA</button>
+        </div>
+    </div>
+
+    <div id="overlay-ruoli" aria-hidden="true" style="display: none;">
         <div id="contenuto-ruolo">
-            <p>Passa il dispositivo al giocatore successivo.</p>
-            <button id="btn-rivela" aria-label="Premi per rivelare il tuo ruolo">Scopri il Tuo Ruolo</button>
-            
-            <div id="dettagli-ruolo" style="display: none; margin-top: 20px;">
+            <div id="dettagli-ruolo" style="margin-top: 20px;">
                 <h3 id="ruolo-titolo"></h3>
-                <p id="ruolo-messaggio"></p>
+                <p id="ruolo-messaggio" style="font-size: 1.1em; margin-bottom: 5px;"></p>
                 <p id="parola-rivelata"></p>
-                <button id="btn-conferma-passa" aria-label="Conferma il ruolo e passa al giocatore successivo" style="background-color: var(--colore-successo);">Conferma e Passa</button>
+                <button id="btn-chiudi-rivelazione" style="margin-top: 20px; background: var(--colore-accento-cittadino);">ACCETTA E PREPARATI</button>
             </div>
         </div>
     </div>
@@ -366,20 +369,38 @@
     <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
 
     <script>
-        // Stato Globale del Gioco
+        // --- CONFIGURAZIONE E STATO GLOBALE ---
+
+        /**
+         * @typedef {Object} Giocatore
+         * @property {string} id - ID univoco (assegnato dal server).
+         * @property {string} nome - Nome scelto dal giocatore.
+         * @property {string} ruolo - 'Cittadino' o 'Impostore' (assegnato dal server).
+         * @property {boolean} isHost - Vero se è l'host della stanza.
+         */
+
         const gameState = {
-            numGiocatori: 0,
-            numImpostori: 0,
-            nomiGiocatori: [], // Array di stringhe
-            ruoliGiocatori: [], // Array di oggetti { nome: string, ruolo: 'Cittadino'|'Impostore' }
+            // Stato locale del giocatore che sta utilizzando questo browser
+            myId: null, 
+            myName: '',
+            myRole: null,
+            isHost: false,
+            
+            // Stato della Stanza (Sincronizzato dal server)
+            roomCode: null,
+            players: [], // Array di Giocatore
             parolaSegreta: '',
-            giocatoreCorrenteIndex: 0,
-            timer: 300, // 5 minuti in secondi
+            timer: 300, 
             intervalloTimer: null,
-            statoCorrente: 'config', // 'config', 'assegnazione', 'gioco', 'fine'
+            
+            // UI State
+            statoCorrente: 'lobby', 
         };
 
-        // Array fisso di 50 parole comuni (in italiano)
+        // Indirizzo del server WebSocket (PLACEHOLDER)
+        const WS_SERVER_URL = "ws://localhost:8080"; 
+        let ws = null; // Oggetto WebSocket
+
         const parole = [
             'casa', 'cane', 'albero', 'fiore', 'libro', 'tavolo', 'sedia', 'sole', 'luna', 'stella',
             'acqua', 'aria', 'terra', 'fuoco', 'pioggia', 'neve', 'gatto', 'topo', 'uccello', 'pesce',
@@ -390,36 +411,46 @@
 
         // --- Riferimenti DOM ---
         const schermate = {
-            config: document.getElementById('schermo-config'),
-            assegnazione: document.getElementById('schermo-assegnazione'),
+            lobby: document.getElementById('schermo-lobby'),
+            configAttesa: document.getElementById('schermo-config-attesa'),
+            rivelazione: document.getElementById('schermo-rivelazione'),
             gioco: document.getElementById('schermo-gioco'),
             fine: document.getElementById('schermo-fine-gioco'),
         };
 
+        const lobbyElementi = {
+            inputNome: document.getElementById('input-nome-giocatore'),
+            btnCrea: document.getElementById('btn-crea-stanza'),
+            btnUnisciti: document.getElementById('btn-unisciti-stanza'),
+            modalCodice: document.getElementById('modal-codice-stanza'),
+            inputCodice: document.getElementById('input-codice-stanza'),
+            btnConfermaCodice: document.getElementById('btn-conferma-codice'),
+            btnAnnullaCodice: document.getElementById('btn-annulla-codice'),
+        };
+        
         const configElementi = {
-            numGiocatori: document.getElementById('num-giocatori'),
-            numImpostori: document.getElementById('num-impostori'),
-            listaGiocatori: document.getElementById('lista-giocatori'),
-            btnInizia: document.getElementById('btn-inizia-gioco'),
+            codiceDisplay: document.getElementById('codice-stanza-display'),
+            statoGiocatore: document.getElementById('stato-giocatore-lobby'),
+            hostSection: document.getElementById('config-host-section'),
+            numImpostoriHost: document.getElementById('num-impostori-host'),
+            numGiocatoriConnessi: document.getElementById('num-giocatori-connessi'),
+            btnInizia: document.getElementById('btn-inizia-gioco-host'),
+            listaGiocatori: document.getElementById('lista-giocatori-lobby'),
         };
 
-        const assegnazioneElementi = {
-            turnoCorrente: document.getElementById('turno-corrente'),
-            btnScopriRuolo: document.getElementById('btn-scopri-ruolo'),
+        const rivelazioneElementi = {
+            btnMostraRuolo: document.getElementById('btn-mostra-ruolo-personale'),
             overlayRuoli: document.getElementById('overlay-ruoli'),
-            contenutoRuolo: document.getElementById('contenuto-ruolo'),
-            btnRivela: document.getElementById('btn-rivela'),
-            dettagliRuolo: document.getElementById('dettagli-ruolo'),
             ruoloTitolo: document.getElementById('ruolo-titolo'),
             ruoloMessaggio: document.getElementById('ruolo-messaggio'),
             parolaRivelata: document.getElementById('parola-rivelata'),
-            btnConfermaPassa: document.getElementById('btn-conferma-passa'),
+            btnChiudiRivelazione: document.getElementById('btn-chiudi-rivelazione'),
         };
         
         const giocoElementi = {
             parolaGioco: document.getElementById('parola-gioco'),
             timerGioco: document.getElementById('timer-gioco'),
-            btnMostraImpostori: document.getElementById('btn-mostra-impostori'),
+            btnVota: document.getElementById('btn-vota'), // Simula il voto
         };
 
         const fineElementi = {
@@ -428,39 +459,16 @@
             btnNuovaPartita: document.getElementById('btn-nuova-partita'),
         };
 
-
-        // --- Funzioni Utility ---
-
-        /**
-         * Implementazione dell'algoritmo di shuffle Fisher-Yates per mescolare un array.
-         * @param {Array<any>} array - L'array da mescolare.
-         * @returns {Array<any>} L'array mescolato.
-         */
-        function shuffleArray(array) {
-            for (let i = array.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [array[i], array[j]] = [array[j], array[i]];
-            }
-            return array;
-        }
-
-        /**
-         * Passa ad uno specifico schermo gestendo le classi CSS.
-         * @param {string} nextScreenId - L'ID dello schermo a cui passare ('config', 'assegnazione', 'gioco', 'fine').
-         */
+        // --- Funzioni Utility (Non dipendono dal server) ---
+        
         function switchScreen(nextScreenId) {
             Object.values(schermate).forEach(screen => screen.classList.remove('attivo'));
             schermate[nextScreenId].classList.add('attivo');
             gameState.statoCorrente = nextScreenId;
-            // Assicurati che l'overlay sia nascosto quando non in assegnazione
-            assegnazioneElementi.overlayRuoli.classList.remove('attivo');
-            window.scrollTo(0, 0); // Torna in cima ad ogni cambio schermo
+            rivelazioneElementi.overlayRuoli.style.display = 'none';
+            window.scrollTo(0, 0); 
         }
         
-        /**
-         * Mostra un messaggio toast (feedback rapido).
-         * @param {string} message - Il messaggio da visualizzare.
-         */
         function showToast(message) {
             const toastContainer = document.getElementById('toast-container');
             const toast = document.createElement('div');
@@ -468,354 +476,336 @@
             toast.textContent = message;
             toastContainer.appendChild(toast);
             
-            // Animazione di apparizione
-            setTimeout(() => {
-                toast.classList.add('show');
-            }, 10);
-
-            // Rimozione dopo 3 secondi
+            setTimeout(() => { toast.classList.add('show'); }, 10);
             setTimeout(() => {
                 toast.classList.remove('show');
                 toast.addEventListener('transitionend', () => toast.remove());
             }, 3000);
         }
 
-        // --- Funzioni di Configurazione ---
-
-        /**
-         * Aggiorna i campi input dei nomi e i selettori di numero impostori/giocatori.
-         */
-        function setupConfig() {
-            // 1. Inizializza i selettori dropdown
-            for (let i = 3; i <= 10; i++) {
-                configElementi.numGiocatori.options.add(new Option(i, i));
-            }
-            // Imposta il default a 5 giocatori
-            configElementi.numGiocatori.value = 5;
-            gameState.numGiocatori = 5;
-
-            // 2. Genera i campi nome e aggiorna il selettore impostori al caricamento
-            updateNumGiocatori();
-
-            // 3. Listener per aggiornare la UI e lo stato quando i selettori cambiano
-            configElementi.numGiocatori.addEventListener('change', updateNumGiocatori);
-            configElementi.numImpostori.addEventListener('change', validateConfig);
-            configElementi.btnInizia.addEventListener('click', startGame);
-
-            // 4. Carica la configurazione temporanea da localStorage (se presente)
-            loadConfigFromLocalStorage();
-        }
-
-        /**
-         * Aggiorna la lista dei campi input nome e i limiti del selettore impostori.
-         */
-        function updateNumGiocatori() {
-            const newNum = parseInt(configElementi.numGiocatori.value, 10);
-            if (isNaN(newNum) || newNum < 3 || newNum > 10) return;
-
-            gameState.numGiocatori = newNum;
-            configElementi.listaGiocatori.innerHTML = '';
-            
-            // Aggiorna il selettore degli Impostori
-            configElementi.numImpostori.innerHTML = '';
-            const maxImpostori = Math.floor(newNum / 2);
-            for (let i = 1; i <= maxImpostori; i++) {
-                configElementi.numImpostori.options.add(new Option(i, i));
-            }
-
-            // Imposta Impostori al minimo/predefinito se il valore precedente era troppo alto
-            gameState.numImpostori = Math.min(parseInt(configElementi.numImpostori.value, 10) || 1, maxImpostori);
-            configElementi.numImpostori.value = gameState.numImpostori;
-
-
-            // Aggiorna la lista dei nomi
-            for (let i = 0; i < newNum; i++) {
-                const defaultName = `Giocatore ${i + 1}`;
-                const div = document.createElement('div');
-                div.className = 'nome-input-container';
-                div.role = 'listitem';
-                
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.id = `nome-giocatore-${i}`;
-                input.value = gameState.nomiGiocatori[i] || defaultName;
-                input.placeholder = defaultName;
-                input.setAttribute('aria-label', `Nome per ${defaultName}`);
-
-                // Listener per l'aggiornamento dinamico del nome
-                input.addEventListener('input', validateConfig); 
-
-                div.appendChild(input);
-                configElementi.listaGiocatori.appendChild(div);
-            }
-
-            validateConfig();
-        }
-
-        /**
-         * Salva la configurazione corrente (nomi e numeri) in localStorage.
-         */
-        function saveConfigToLocalStorage() {
-            const nomi = Array.from(configElementi.listaGiocatori.querySelectorAll('input')).map(input => input.value.trim());
-            const config = {
-                numGiocatori: gameState.numGiocatori,
-                numImpostori: gameState.numImpostori,
-                nomiGiocatori: nomi.filter(n => n),
-            };
-            localStorage.setItem('impostoreGameConfig', JSON.stringify(config));
-        }
-
-        /**
-         * Carica la configurazione da localStorage se presente.
-         */
-        function loadConfigFromLocalStorage() {
-            const configJson = localStorage.getItem('impostoreGameConfig');
-            if (!configJson) return;
-
-            try {
-                const config = JSON.parse(configJson);
-                
-                // Applica numero giocatori
-                if (config.numGiocatori >= 3 && config.numGiocatori <= 10) {
-                    configElementi.numGiocatori.value = config.numGiocatori;
-                    gameState.numGiocatori = config.numGiocatori;
-                    updateNumGiocatori(); // Ricrea gli input con il nuovo numero
-                }
-
-                // Applica nomi
-                if (Array.isArray(config.nomiGiocatori)) {
-                    const inputs = configElementi.listaGiocatori.querySelectorAll('input');
-                    config.nomiGiocatori.forEach((name, index) => {
-                        if (inputs[index]) {
-                            inputs[index].value = name;
-                        }
-                    });
-                }
-
-                // Applica numero impostori (dopo aver aggiornato i limiti)
-                const maxImpostori = Math.floor(gameState.numGiocatori / 2);
-                if (config.numImpostori >= 1 && config.numImpostori <= maxImpostori) {
-                    configElementi.numImpostori.value = config.numImpostori;
-                    gameState.numImpostori = config.numImpostori;
-                }
-
-                validateConfig();
-                showToast('Configurazione precedente caricata!');
-            } catch (e) {
-                console.error("Errore nel caricamento della configurazione da localStorage", e);
-                localStorage.removeItem('impostoreGameConfig');
-            }
-        }
-
-        /**
-         * Valida la configurazione e abilita/disabilita il pulsante di inizio.
-         */
-        function validateConfig() {
-            // Aggiorna lo stato con i valori correnti
-            gameState.numGiocatori = parseInt(configElementi.numGiocatori.value, 10);
-            gameState.numImpostori = parseInt(configElementi.numImpostori.value, 10);
-            
-            const nomiInput = Array.from(configElementi.listaGiocatori.querySelectorAll('input'));
-            const nomiValidati = nomiInput.map((input, index) => input.value.trim() || `Giocatore ${index + 1}`);
-
-            // 1. Controlla che i numeri siano validi
-            const isValidNum = gameState.numGiocatori >= 3 && gameState.numGiocatori <= 10 &&
-                               gameState.numImpostori >= 1 && gameState.numImpostori <= Math.floor(gameState.numGiocatori / 2);
-
-            // 2. Controlla che i nomi non siano duplicati (case-insensitive, ignora spazi extra)
-            const uniqueNomi = new Set(nomiValidati.map(name => name.toLowerCase()));
-            const isUniqueNomi = uniqueNomi.size === nomiValidati.length;
-            
-            // Abilita il pulsante solo se entrambe le condizioni sono soddisfatte
-            configElementi.btnInizia.disabled = !(isValidNum && isUniqueNomi);
-
-            if (!isUniqueNomi) {
-                // Potenziale feedback visivo per nomi duplicati
-            }
-
-            // Aggiorna lo stato dei nomi validati
-            gameState.nomiGiocatori = nomiValidati;
-
-            // Salva sempre la config quando si cambia un input
-            saveConfigToLocalStorage();
-        }
-
-        // --- Funzioni di Avvio Gioco ---
-
-        /**
-         * Inizia il gioco: genera parola, assegna ruoli e passa alla fase di assegnazione.
-         */
-        function startGame() {
-            if (configElementi.btnInizia.disabled) {
-                showToast("Errore: La configurazione non è valida.");
-                return;
-            }
-
-            // 1. Genera Parola Segreta
-            const randomIndex = Math.floor(Math.random() * parole.length);
-            gameState.parolaSegreta = parole[randomIndex].toUpperCase();
-            console.log(`[DEBUG] Parola Segreta: ${gameState.parolaSegreta}`);
-
-            // 2. Assegna Ruoli (Fisher-Yates shuffle)
-            let ruoli = Array(gameState.numGiocatori).fill('Cittadino');
-            for (let i = 0; i < gameState.numImpostori; i++) {
-                ruoli[i] = 'Impostore';
-            }
-            ruoli = shuffleArray(ruoli);
-
-            // 3. Combina nomi e ruoli
-            gameState.ruoliGiocatori = gameState.nomiGiocatori.map((nome, index) => ({
-                nome: nome,
-                ruolo: ruoli[index]
-            }));
-
-            console.log("[DEBUG] Ruoli Assegnati:", gameState.ruoliGiocatori);
-
-            // 4. Inizializza fase di assegnazione
-            gameState.giocatoreCorrenteIndex = 0;
-            startRoleAssignment();
-            
-            // 5. Rimuove la configurazione da localStorage (il gioco è iniziato)
-            localStorage.removeItem('impostoreGameConfig');
-        }
-
-        // --- Funzioni di Assegnazione Ruoli ---
-
-        /**
-         * Inizia la fase sequenziale di assegnazione ruoli.
-         */
-        function startRoleAssignment() {
-            switchScreen('assegnazione');
-            updateAssignmentScreen();
-            
-            assegnazioneElementi.btnScopriRuolo.addEventListener('click', showRoleOverlay, { once: true });
-            assegnazioneElementi.btnRivela.addEventListener('click', revealRole, { once: true });
-            assegnazioneElementi.btnConfermaPassa.addEventListener('click', handleRoleConfirmation, { once: true });
-        }
-
-        /**
-         * Aggiorna la UI per il giocatore corrente.
-         */
-        function updateAssignmentScreen() {
-            const index = gameState.giocatoreCorrenteIndex;
-            const nome = gameState.ruoliGiocatori[index].nome;
-            
-            assegnazioneElementi.turnoCorrente.textContent = `Turno di: ${nome} (${index + 1} di ${gameState.numGiocatori})`;
-            assegnazioneElementi.btnScopriRuolo.style.display = 'block';
-            assegnazioneElementi.btnScopriRuolo.disabled = false;
-        }
-
-        /**
-         * Mostra l'overlay per la rivelazione del ruolo (prima fase).
-         */
-        function showRoleOverlay() {
-            assegnazioneElementi.btnScopriRuolo.style.display = 'none';
-            
-            // Reset overlay
-            assegnazioneElementi.btnRivela.style.display = 'block';
-            assegnazioneElementi.dettagliRuolo.style.display = 'none';
-            assegnazioneElementi.contenutoRuolo.querySelector('p').style.display = 'none';
-            
-            assegnazioneElementi.overlayRuoli.classList.add('attivo');
-        }
-        
-        /**
-         * Rivela il ruolo e la parola segreta al giocatore corrente.
-         */
-        function revealRole() {
-            const index = gameState.giocatoreCorrenteIndex;
-            const giocatore = gameState.ruoliGiocatori[index];
-            
-            assegnazioneElementi.btnRivela.style.display = 'none';
-            assegnazioneElementi.dettagliRuolo.style.display = 'block';
-
-            if (giocatore.ruolo === 'Cittadino') {
-                assegnazioneElementi.ruoloTitolo.textContent = 'Sei un CITTADINO!';
-                assegnazioneElementi.ruoloTitolo.style.color = varToCss('colore-successo');
-                assegnazioneElementi.ruoloMessaggio.textContent = `La parola segreta è:`;
-                assegnazioneElementi.parolaRivelata.textContent = gameState.parolaSegreta;
-            } else { // Impostore
-                assegnazioneElementi.ruoloTitolo.textContent = 'Sei un IMPOSTORE!';
-                assegnazioneElementi.ruoloTitolo.style.color = varToCss('colore-accento');
-                assegnazioneElementi.ruoloMessaggio.textContent = 'Non conosci la parola! Devi fingere di saperla.';
-                assegnazioneElementi.parolaRivelata.textContent = '??????';
-                assegnazioneElementi.parolaRivelata.style.color = varToCss('colore-accento');
-            }
-            
-            assegnazioneElementi.btnConfermaPassa.addEventListener('click', handleRoleConfirmation, { once: true });
-        }
-        
-        /**
-         * Gestisce la conferma del ruolo e passa al giocatore successivo o alla fase di gioco.
-         */
-        function handleRoleConfirmation() {
-            // Offusca di nuovo
-            assegnazioneElementi.overlayRuoli.classList.remove('attivo');
-
-            // Simula un piccolo delay per il passaggio del dispositivo
-            setTimeout(() => {
-                gameState.giocatoreCorrenteIndex++;
-                
-                if (gameState.giocatoreCorrenteIndex < gameState.numGiocatori) {
-                    // Continua con il prossimo giocatore
-                    startRoleAssignment();
-                    showToast(`Passa a ${gameState.ruoliGiocatori[gameState.giocatoreCorrenteIndex].nome}`);
-                } else {
-                    // Tutti hanno visto il ruolo, inizia il gioco
-                    startDiscussionPhase();
-                }
-            }, 1000); // 1 secondo di delay
-        }
-
-        /**
-         * Funzione helper per ottenere il valore di una variabile CSS.
-         * @param {string} varName - Il nome della variabile CSS (es. 'colore-accento').
-         * @returns {string} Il valore CSS.
-         */
         function varToCss(varName) {
             return getComputedStyle(document.documentElement).getPropertyValue(`--${varName}`).trim();
         }
 
-        // --- Funzioni Fase di Gioco (Discussione) ---
-        
-        /**
-         * Inizia la fase di discussione (Schermo Gioco Principale).
-         */
-        function startDiscussionPhase() {
-            switchScreen('gioco');
-            
-            giocoElementi.parolaGioco.textContent = gameState.parolaSegreta;
-            
-            // Inizializza e avvia il timer
-            gameState.timer = 300; // 5 minuti
-            updateTimerDisplay();
-            
-            giocoElementi.btnMostraImpostori.addEventListener('click', revealImpostors, { once: true });
+        // --- LOGICA DI CONNESSIONE (SCHEMATICA) ---
 
-            // Avvia il countdown
-            if (gameState.intervalloTimer) clearInterval(gameState.intervalloTimer);
-            gameState.intervalloTimer = setInterval(countdownTimer, 1000);
+        /**
+         * Inizializza la connessione WebSocket.
+         * NECESSITA DI UN SERVER ESTERNO PER FUNZIONARE.
+         */
+        function initializeWebSocket() {
+            if (ws && ws.readyState === WebSocket.OPEN) return;
+
+            try {
+                ws = new WebSocket(WS_SERVER_URL);
+                
+                ws.onopen = () => {
+                    console.log("[WS] Connesso al server.");
+                    showToast("Connessione stabilita. Pronto per la lobby.");
+                };
+
+                ws.onmessage = (event) => {
+                    const message = JSON.parse(event.data);
+                    handleServerMessage(message);
+                };
+
+                ws.onerror = (error) => {
+                    console.error("[WS] Errore di connessione:", error);
+                    showToast("ERRORE: Impossibile connettersi al server (backend offline).");
+                    // Qui gestiresti un fallback o un reset
+                };
+
+                ws.onclose = () => {
+                    console.log("[WS] Connessione chiusa.");
+                    showToast("Connessione persa. Ritorno alla lobby.");
+                    resetGame(); // Torna allo stato iniziale
+                };
+                
+            } catch (e) {
+                // Questo catch gestisce l'errore se l'URL non è valido o se la connessione fallisce prima di onopen/onerror
+                showToast("IMPOSSIBILE AVVIARE LA CONNESSIONE. Verifica che il server sia attivo.");
+                console.error("Errore critico di connessione WebSocket:", e);
+            }
         }
 
         /**
-         * Funzione di countdown del timer.
+         * Invia un messaggio JSON al server.
+         * @param {Object} data - Dati da inviare.
          */
-        function countdownTimer() {
-            gameState.timer--;
-            updateTimerDisplay();
-
-            if (gameState.timer <= 0) {
-                clearInterval(gameState.intervalloTimer);
-                gameState.intervalloTimer = null;
-                showToast("Tempo scaduto! È ora di rivelare i ruoli.");
-                // Forzare la rivelazione al termine del tempo (opzionale)
-                // revealImpostors(); 
-                giocoElementi.btnMostraImpostori.disabled = false;
+        function sendToServer(data) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify(data));
+            } else {
+                console.warn("Impossibile inviare: connessione WebSocket non pronta.", data);
+                showToast("Errore di rete. Riprova la connessione.");
             }
         }
         
         /**
-         * Aggiorna la visualizzazione del timer.
+         * Gestisce i messaggi ricevuti dal server.
+         * @param {Object} message - Messaggio dal server, con campo 'type'.
+         */
+        function handleServerMessage(message) {
+            console.log("[WS] Messaggio ricevuto:", message.type, message);
+
+            switch (message.type) {
+                case 'ROOM_CREATED':
+                    gameState.myId = message.playerId;
+                    gameState.roomCode = message.roomCode;
+                    gameState.isHost = true;
+                    updateLobbyState(message.players, "Sei l'HOST! Configura e avvia.");
+                    setupHostControls(message.numPlayers);
+                    switchScreen('configAttesa');
+                    break;
+                case 'JOINED_ROOM':
+                    gameState.myId = message.playerId;
+                    gameState.roomCode = message.roomCode;
+                    gameState.isHost = false;
+                    updateLobbyState(message.players, "Sei connesso. Attendi l'Host per iniziare.");
+                    switchScreen('configAttesa');
+                    break;
+                case 'PLAYER_UPDATE':
+                    // Aggiorna la lista giocatori quando qualcuno si unisce/lascia
+                    updateLobbyState(message.players, gameState.isHost ? "Configura e avvia." : "Attendi l'Host.");
+                    // L'host deve convalidare il pulsante di inizio
+                    if (gameState.isHost) {
+                        setupHostControls(message.players.length);
+                    }
+                    break;
+                case 'GAME_START':
+                    // Il gioco è iniziato, il server invia il ruolo e la parola a TUTTI
+                    gameState.parolaSegreta = message.word.toUpperCase();
+                    gameState.myRole = message.role;
+                    gameState.players = message.players; // Lista completa e finale dei giocatori
+
+                    // Rivelazione del ruolo individuale (passa allo schermo 3)
+                    startRoleRevealPhase(); 
+                    break;
+                case 'SYNC_TIMER':
+                    // Sincronizzazione del timer
+                    gameState.timer = message.timeRemaining;
+                    updateTimerDisplay();
+                    break;
+                case 'PHASE_CHANGE':
+                    // Passaggio automatico alla fase di discussione
+                    if (message.phase === 'DISCUSSION') {
+                        startDiscussionPhase();
+                    }
+                    // Aggiungere logica per 'VOTATION', 'END_GAME' ecc.
+                    break;
+                case 'GAME_ENDED':
+                    // Il server decide quando il gioco finisce e invia il risultato
+                    revealFinalResults(message.winningTeam, message.finalRoles);
+                    break;
+                case 'ERROR':
+                    showToast(`ERRORE SERVER: ${message.message}`);
+                    break;
+                default:
+                    console.warn("Messaggio server sconosciuto:", message);
+            }
+        }
+        
+        // --- LOGICA DI LOBBY ---
+
+        function handleCreateRoom() {
+            gameState.myName = lobbyElementi.inputNome.value.trim();
+            if (!gameState.myName) {
+                showToast("Inserisci un nome valido.");
+                return;
+            }
+            
+            // Invia la richiesta di creazione stanza al server
+            sendToServer({
+                type: 'CREATE_ROOM',
+                playerName: gameState.myName
+            });
+            showToast("Richiesta di creazione stanza inviata...");
+        }
+
+        function handleJoinRoomRequest() {
+            gameState.myName = lobbyElementi.inputNome.value.trim();
+            if (!gameState.myName) {
+                showToast("Inserisci un nome valido.");
+                return;
+            }
+            // Mostra il modale per inserire il codice
+            lobbyElementi.modalCodice.style.display = 'flex';
+        }
+
+        function handleConfirmCode() {
+            const code = lobbyElementi.inputCodice.value.trim().toUpperCase();
+            if (code.length !== 4) {
+                showToast("Il codice deve essere di 4 caratteri.");
+                return;
+            }
+
+            // Invia la richiesta di unione al server
+            sendToServer({
+                type: 'JOIN_ROOM',
+                playerName: gameState.myName,
+                roomCode: code
+            });
+            
+            lobbyElementi.modalCodice.style.display = 'none';
+            showToast(`Tentativo di unione alla stanza ${code}...`);
+        }
+        
+        function handleCancelCode() {
+            lobbyElementi.modalCodice.style.display = 'none';
+            lobbyElementi.inputCodice.value = ''; // Pulisce il campo
+        }
+        
+        /**
+         * Aggiorna la lista dei giocatori e le info sulla stanza.
+         * @param {Array<Giocatore>} players - Lista dei giocatori connessi.
+         * @param {string} statusMessage - Messaggio di stato.
+         */
+        function updateLobbyState(players, statusMessage) {
+            gameState.players = players;
+            configElementi.codiceDisplay.textContent = gameState.roomCode || '----';
+            configElementi.statoGiocatore.textContent = statusMessage;
+            configElementi.numGiocatoriConnessi.textContent = `${players.length}`;
+
+            // Popola la lista
+            configElementi.listaGiocatori.innerHTML = '';
+            if (players.length === 0) {
+                configElementi.listaGiocatori.innerHTML = '<li>Nessun giocatore connesso...</li>';
+                return;
+            }
+            
+            players.forEach(p => {
+                const li = document.createElement('li');
+                li.textContent = p.nome;
+                if (p.id === gameState.myId) {
+                    li.textContent += ' (TU)';
+                    li.style.color = varToCss('--colore-accento-cittadino');
+                } else if (p.isHost) {
+                    li.textContent += ' (HOST)';
+                    li.style.color = varToCss('--colore-accento-impostore');
+                }
+                configElementi.listaGiocatori.appendChild(li);
+            });
+        }
+        
+        /**
+         * Configura la UI per l'Host.
+         * @param {number} numPlayers - Numero di giocatori attuali.
+         */
+        function setupHostControls(numPlayers) {
+            if (!gameState.isHost) {
+                configElementi.hostSection.style.display = 'none';
+                return;
+            }
+
+            configElementi.hostSection.style.display = 'block';
+
+            // Aggiorna il selettore degli Impostori
+            configElementi.numImpostoriHost.innerHTML = '';
+            const maxImpostori = Math.floor(numPlayers / 2);
+            for (let i = 1; i <= maxImpostori; i++) {
+                configElementi.numImpostoriHost.options.add(new Option(i, i));
+            }
+            
+            // Valida il pulsante Inizia
+            const canStart = numPlayers >= 3;
+            configElementi.btnInizia.disabled = !canStart;
+            configElementi.btnInizia.textContent = canStart ? "AVVIA PROTOCOLLO GIOCO" : "MIN. 3 GIOCATORI RICHIESTI";
+
+            if (canStart && !configElementi.btnInizia.dataset.listenerAdded) {
+                configElementi.btnInizia.addEventListener('click', handleHostStartGame);
+                configElementi.btnInizia.dataset.listenerAdded = true;
+            }
+        }
+
+        /**
+         * L'Host invia al server il comando di iniziare il gioco.
+         */
+        function handleHostStartGame() {
+            const numImpostori = parseInt(configElementi.numImpostoriHost.value, 10);
+            if (isNaN(numImpostori) || numImpostori < 1) {
+                showToast("Seleziona un numero valido di Impostori.");
+                return;
+            }
+
+            sendToServer({
+                type: 'START_GAME',
+                roomCode: gameState.roomCode,
+                numImpostori: numImpostori
+            });
+            showToast("Invio del comando di avvio al server...");
+        }
+
+        // --- FASE DI RIVELAZIONE RUOLO (Multiplayer) ---
+        
+        /**
+         * Gestisce la fase in cui il server ha inviato il ruolo.
+         */
+        function startRoleRevealPhase() {
+            switchScreen('rivelazione');
+            // Il ruolo è in gameState.myRole e la parola in gameState.parolaSegreta
+            rivelazioneElementi.btnMostraRuolo.addEventListener('click', showPersonalRole, { once: true });
+        }
+        
+        /**
+         * Mostra il ruolo solo al giocatore che preme il pulsante.
+         */
+        function showPersonalRole() {
+            rivelazioneElementi.btnMostraRuolo.style.display = 'none';
+            rivelazioneElementi.overlayRuoli.style.display = 'flex';
+            rivelazioneElementi.overlayRuoli.classList.add('attivo');
+
+            // Reset classi
+            rivelazioneElementi.ruoloTitolo.classList.remove('role-cittadino', 'role-impostore');
+            rivelazioneElementi.parolaRivelata.style.color = varToCss('--colore-testo');
+
+            if (gameState.myRole === 'Cittadino') {
+                rivelazioneElementi.ruoloTitolo.textContent = 'STATUS: CITTADINO';
+                rivelazioneElementi.ruoloTitolo.classList.add('role-cittadino');
+                rivelazioneElementi.ruoloMessaggio.textContent = `Identità verificata. Chiave d'accesso:`;
+                rivelazioneElementi.parolaRivelata.textContent = gameState.parolaSegreta;
+                rivelazioneElementi.parolaRivelata.style.color = varToCss('--colore-accento-cittadino');
+            } else { 
+                rivelazioneElementi.ruoloTitolo.textContent = 'STATUS: IMPOSTORE';
+                rivelazioneElementi.ruoloTitolo.classList.add('role-impostore');
+                rivelazioneElementi.ruoloMessaggio.textContent = 'ATTENZIONE: Accesso negato. Nascondi la tua identità.';
+                rivelazioneElementi.parolaRivelata.textContent = '[ DATI CRIPTATI ]';
+                rivelazioneElementi.parolaRivelata.style.color = varToCss('--colore-accento-impostore');
+            }
+            
+            rivelazioneElementi.btnChiudiRivelazione.addEventListener('click', handleRoleAcceptance, { once: true });
+        }
+        
+        /**
+         * Il giocatore conferma di aver visto il proprio ruolo.
+         */
+        function handleRoleAcceptance() {
+            rivelazioneElementi.overlayRuoli.classList.remove('attivo');
+            // Invia notifica al server (simulato)
+            // sendToServer({ type: 'ROLE_ACCEPTED', playerId: gameState.myId, roomCode: gameState.roomCode }); 
+            showToast("Ruolo accettato. Preparati per la discussione...");
+            
+            // In un gioco reale, si aspetterebbe il messaggio PHAS_CHANGE dal server
+            // che viene inviato solo quando TUTTI i giocatori hanno accettato.
+        }
+
+        // --- FASE DI GIOCO (Discussione Sincronizzata) ---
+        
+        function startDiscussionPhase() {
+            switchScreen('gioco');
+            
+            // La parola è già stata impostata da GAME_START
+            giocoElementi.parolaGioco.textContent = (gameState.myRole === 'Cittadino') 
+                ? gameState.parolaSegreta 
+                : 'PAROLA NON RILEVATA'; // Solo i cittadini vedono la parola, l'impostore vede un placeholder
+            
+            // Il timer è gestito e sincronizzato dal server (messaggio SYNC_TIMER)
+            // L'interfaccia si limita a visualizzare i dati ricevuti
+
+            giocoElementi.btnVota.addEventListener('click', handleStartVoting, { once: true });
+        }
+        
+        /**
+         * Aggiorna la visualizzazione del timer (in base ai dati del server).
          */
         function updateTimerDisplay() {
             const minuti = Math.floor(gameState.timer / 60);
@@ -823,38 +813,48 @@
             const displayMinuti = String(minuti).padStart(2, '0');
             const displaySecondi = String(secondi).padStart(2, '0');
             giocoElementi.timerGioco.textContent = `${displayMinuti}:${displaySecondi}`;
+            
+            // Questo codice non ha bisogno di un intervallo locale se il server invia SYNC_TIMER ogni secondo.
         }
 
+        /**
+         * Avvia la votazione (richiesta al server).
+         */
+        function handleStartVoting() {
+            // Invia la richiesta di votazione. Solo l'host o un voto unanime avvia la votazione.
+            sendToServer({
+                type: 'REQUEST_VOTE',
+                roomCode: gameState.roomCode,
+                playerId: gameState.myId
+            });
+            showToast("Richiesta votazione inviata. In attesa del server...");
+            
+            // In un gioco reale, il server passerebbe a uno schermo di votazione
+            // switchScreen('votazione'); 
+        }
 
-        // --- Funzioni Fine Gioco ---
+        // --- FASE DI FINE GIOCO ---
 
         /**
          * Ritorna alla fase di fine gioco e rivela tutti i ruoli.
+         * @param {string} winningTeam - Il team vincente ('Cittadini' o 'Impostori').
+         * @param {Array<Object>} finalRoles - Lista completa dei ruoli dal server.
          */
-        function revealImpostors() {
-            clearInterval(gameState.intervalloTimer);
-            gameState.intervalloTimer = null;
-            
+        function revealFinalResults(winningTeam, finalRoles) {
             switchScreen('fine');
 
-            // Determina il risultato (semplificato: se il timer è scaduto, si va alla rivelazione)
-            const impostoriTrovati = gameState.ruoliGiocatori.filter(g => g.ruolo === 'Impostore');
-            const numImpostori = impostoriTrovati.length;
-            
-            // Logica del risultato (molto semplificata: i cittadini vincono se il timer è finito)
-            if (gameState.timer > 0) {
-                 // Questo è il caso in cui i giocatori hanno deciso di rivelare prima del tempo
-                 fineElementi.risultatoFinale.textContent = `Partita conclusa!`;
-            } else {
-                 fineElementi.risultatoFinale.textContent = `Tempo Scaduto!`;
-            }
+            finalRoles = finalRoles || gameState.players.map(p => ({ nome: p.nome, ruolo: p.ruolo }));
 
-            // Popola la lista dei risultati
+            fineElementi.risultatoFinale.textContent = `${winningTeam.toUpperCase()} VITTORIOSI!`;
+            fineElementi.risultatoFinale.style.color = (winningTeam === 'Cittadini') 
+                ? varToCss('--colore-accento-cittadino') 
+                : varToCss('--colore-accento-impostore');
+            
             fineElementi.listaRisultati.innerHTML = '';
-            gameState.ruoliGiocatori.forEach(giocatore => {
+            finalRoles.forEach(g => {
                 const li = document.createElement('li');
-                const ruoloClass = giocatore.ruolo === 'Impostore' ? 'ruolo-impostore' : 'ruolo-cittadino';
-                li.innerHTML = `<strong>${giocatore.nome}</strong>: <span class="${ruoloClass}">${giocatore.ruolo}</span>`;
+                const ruoloClass = g.ruolo === 'Impostore' ? 'ruolo-impostore' : 'ruolo-cittadino';
+                li.innerHTML = `<strong>${g.nome}</strong>: <span class="${ruoloClass}">${g.ruolo.toUpperCase()}</span>`;
                 fineElementi.listaRisultati.appendChild(li);
             });
             
@@ -862,52 +862,47 @@
         }
 
         /**
-         * Resetta lo stato del gioco e torna allo schermo di configurazione.
+         * Resetta lo stato del gioco e torna alla schermata iniziale (lobby).
          */
         function resetGame() {
-            // Resetta lo stato globale (mantiene solo config base)
-            gameState.numGiocatori = 0;
-            gameState.numImpostori = 0;
-            gameState.nomiGiocatori = []; 
-            gameState.ruoliGiocatori = [];
-            gameState.parolaSegreta = '';
-            gameState.giocatoreCorrenteIndex = 0;
-
-            // Rimuove i listener e pulisce l'overlay per evitare duplicati
-            assegnazioneElementi.btnScopriRuolo.removeEventListener('click', showRoleOverlay);
-            assegnazioneElementi.btnRivela.removeEventListener('click', revealRole);
-            assegnazioneElementi.btnConfermaPassa.removeEventListener('click', handleRoleConfirmation);
-            giocoElementi.btnMostraImpostori.removeEventListener('click', revealImpostors);
-            fineElementi.btnNuovaPartita.removeEventListener('click', resetGame);
-
-            // Reinizializza la configurazione e la UI
-            configElementi.numGiocatori.innerHTML = '';
-            configElementi.numImpostori.innerHTML = '';
-            configElementi.listaGiocatori.innerHTML = '';
+            // Pulisce lo stato locale e i listener
+            gameState.myId = null;
+            gameState.myRole = null;
+            gameState.isHost = false;
+            gameState.roomCode = null;
+            gameState.players = [];
             
-            setupConfig(); // Re-popola i selettori e gli input
-            switchScreen('config');
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                // Notifica il server che stiamo uscendo dalla stanza (simulato)
+                // ws.send(JSON.stringify({ type: 'LEAVE_ROOM', playerId: gameState.myId }));
+            }
+            
+            // Rimuovi vecchi listener (solo quelli che non sono once)
+            configElementi.btnInizia.removeEventListener('click', handleHostStartGame); 
+            configElementi.btnInizia.dataset.listenerAdded = false;
+
+            // Pulisci l'interfaccia
+            lobbyElementi.inputNome.value = gameState.myName; 
+            switchScreen('lobby');
         }
 
         // --- Inizializzazione ---
         
-        /**
-         * Funzione principale di inizializzazione.
-         */
         function init() {
-            setupConfig();
+            // 1. Inizializza i listener per la lobby
+            lobbyElementi.btnCrea.addEventListener('click', handleCreateRoom);
+            lobbyElementi.btnUnisciti.addEventListener('click', handleJoinRoomRequest);
+            lobbyElementi.btnConfermaCodice.addEventListener('click', handleConfirmCode);
+            lobbyElementi.btnAnnullaCodice.addEventListener('click', handleCancelCode);
+
+            // 2. Inizializza la connessione WebSocket (Necessaria per la logica multiplayer)
+            initializeWebSocket(); 
             
-            // Aggiunge un listener globale per il reset soft su ricarica (solo per test)
-            window.addEventListener('beforeunload', () => {
-                // Opzionale: pulire lo stato di gioco ma mantenere la config
-                // Questo è gestito da save/load config, ma previene bug
-                if (gameState.statoCorrente !== 'config') {
-                    // Salvare qui lo stato di gioco se fosse necessario ripristinarlo, ma per ora lo ignoriamo.
-                }
-            });
+            // Inserimento simulato del nome (per testare la creazione/join)
+            lobbyElementi.inputNome.value = "Giocatore" + Math.floor(Math.random() * 100);
             
-            console.log("Applicazione Gioco dell'Impostore avviata.");
-            showToast("Benvenuto! Configura la tua partita.");
+            console.log("Applicazione Gioco dell'Impostore (Multiplayer Client) avviata.");
+            showToast("Connessione in corso...");
         }
 
         document.addEventListener('DOMContentLoaded', init);
