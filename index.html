@@ -4,9 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Impostore Cyber: Multiplayer Client</title>
-    <meta name="description" content="Client multiplayer per il Gioco dell'Impostore, con grafica dark-mode e Vanilla JS. Richiede un server backend (WebSocket) per il funzionamento completo.">
+    <meta name="description" content="Client multiplayer per il Gioco dell'Impostore. Si connette al server Socket.IO.">
 
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
 
     <style>
         /* Variabili Globali e Tema Cyber Dark */
@@ -268,7 +270,19 @@
         .toast {
             background-color: #3a3a5c;
             color: var(--colore-testo);
+            padding: 12px 20px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7);
+            transform: translateX(100%);
             border-left: 5px solid var(--colore-accento-cittadino);
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(0);
         }
         
         /* Media query per la responsività */
@@ -286,6 +300,7 @@
         
         <div id="schermo-lobby" class="schermo attivo">
             <h1>:: ACCESSO RETE GIOCO ::</h1>
+            <p style="margin-bottom: 15px; color: #aaa;">Connesso a: <span id="server-status">localhost:3000</span></p>
 
             <div class="config-gruppo">
                 <h2>IDENTITÀ</h2>
@@ -328,13 +343,13 @@
         <div id="schermo-gioco" class="schermo">
             <h2>FASE DI COMUNICAZIONE</h2>
             <p style="font-size: 1.1em; color: #aaa;">Parola di riferimento:</p>
-            <p id="parola-gioco" aria-live="polite">PAROLA</p>
+            <p id="parola-gioco" aria-live="polite">IN ATTESA...</p>
             
             <p style="margin-bottom: 10px;">Stato del timer:</p>
             <div id="timer-gioco" role="timer" aria-live="polite">05:00</div>
             
             <p style="font-style: italic; color: #999;">Cittadini: Votate per l'Impostore. Impostore: Rimanete nascosti.</p>
-            <button id="btn-vota" style="margin-top: 30px;" aria-label="Avvia la votazione per l'impostore">AVVIA VOTAZIONE (Simulata)</button>
+            <button id="btn-vota" style="margin-top: 30px;" aria-label="Avvia la votazione per l'impostore">RICHIESTA VOTAZIONE</button>
         </div>
 
         <div id="schermo-fine-gioco" class="schermo">
@@ -355,7 +370,7 @@
         </div>
     </div>
 
-    <div id="overlay-ruoli" aria-hidden="true" style="display: none;">
+    <div id="overlay-ruoli" class="overlay" aria-hidden="true" style="display: none; opacity: 0;">
         <div id="contenuto-ruolo">
             <div id="dettagli-ruolo" style="margin-top: 20px;">
                 <h3 id="ruolo-titolo"></h3>
@@ -371,13 +386,7 @@
     <script>
         // --- CONFIGURAZIONE E STATO GLOBALE ---
 
-        /**
-         * @typedef {Object} Giocatore
-         * @property {string} id - ID univoco (assegnato dal server).
-         * @property {string} nome - Nome scelto dal giocatore.
-         * @property {string} ruolo - 'Cittadino' o 'Impostore' (assegnato dal server).
-         * @property {boolean} isHost - Vero se è l'host della stanza.
-         */
+        /** @typedef {Object} Giocatore */
 
         const gameState = {
             // Stato locale del giocatore che sta utilizzando questo browser
@@ -389,25 +398,21 @@
             // Stato della Stanza (Sincronizzato dal server)
             roomCode: null,
             players: [], // Array di Giocatore
-            parolaSegreta: '',
+            parolaSegreta: null,
             timer: 300, 
-            intervalloTimer: null,
             
             // UI State
             statoCorrente: 'lobby', 
         };
 
-        // Indirizzo del server WebSocket (PLACEHOLDER)
-        const WS_SERVER_URL = "ws://localhost:8080"; 
-        let ws = null; // Oggetto WebSocket
+        // Indirizzo del server Socket.IO. Deve corrispondere all'indirizzo in cui Node.js è in esecuzione.
+        // Se esegui Node.js sulla stessa macchina:
+        const WS_SERVER_URL = "http://localhost:3000"; 
+        
+        // Se pubblicherai il gioco:
+        // const WS_SERVER_URL = "https://IL_TUO_DOMINIO.com"; 
 
-        const parole = [
-            'casa', 'cane', 'albero', 'fiore', 'libro', 'tavolo', 'sedia', 'sole', 'luna', 'stella',
-            'acqua', 'aria', 'terra', 'fuoco', 'pioggia', 'neve', 'gatto', 'topo', 'uccello', 'pesce',
-            'pane', 'latte', 'zucchero', 'sale', 'frutta', 'verdura', 'scuola', 'lavoro', 'strada', 'città',
-            'montagna', 'mare', 'fiume', 'ponte', 'auto', 'treno', 'aereo', 'nave', 'orologio', 'telefono',
-            'gioco', 'musica', 'film', 'sport', 'amico', 'famiglia', 'tempo', 'denaro', 'carta', 'penna'
-        ];
+        let ws = null; // Oggetto Socket.IO
 
         // --- Riferimenti DOM ---
         const schermate = {
@@ -450,7 +455,7 @@
         const giocoElementi = {
             parolaGioco: document.getElementById('parola-gioco'),
             timerGioco: document.getElementById('timer-gioco'),
-            btnVota: document.getElementById('btn-vota'), // Simula il voto
+            btnVota: document.getElementById('btn-vota'),
         };
 
         const fineElementi = {
@@ -459,12 +464,13 @@
             btnNuovaPartita: document.getElementById('btn-nuova-partita'),
         };
 
-        // --- Funzioni Utility (Non dipendono dal server) ---
+        // --- Funzioni Utility ---
         
         function switchScreen(nextScreenId) {
             Object.values(schermate).forEach(screen => screen.classList.remove('attivo'));
             schermate[nextScreenId].classList.add('attivo');
             gameState.statoCorrente = nextScreenId;
+            rivelazioneElementi.overlayRuoli.classList.remove('attivo');
             rivelazioneElementi.overlayRuoli.style.display = 'none';
             window.scrollTo(0, 0); 
         }
@@ -487,164 +493,151 @@
             return getComputedStyle(document.documentElement).getPropertyValue(`--${varName}`).trim();
         }
 
-        // --- LOGICA DI CONNESSIONE (SCHEMATICA) ---
+        /** Aggiorna la visualizzazione del timer. */
+        function updateTimerDisplay() {
+            const minuti = Math.floor(gameState.timer / 60);
+            const secondi = gameState.timer % 60;
+            const displayMinuti = String(minuti).padStart(2, '0');
+            const displaySecondi = String(secondi).padStart(2, '0');
+            giocoElementi.timerGioco.textContent = `${displayMinuti}:${displaySecondi}`;
+        }
+        
+        // --- LOGICA DI CONNESSIONE SOCKET.IO ---
 
-        /**
-         * Inizializza la connessione WebSocket.
-         * NECESSITA DI UN SERVER ESTERNO PER FUNZIONARE.
-         */
+        /** Inizializza la connessione Socket.IO. */
         function initializeWebSocket() {
-            if (ws && ws.readyState === WebSocket.OPEN) return;
+            // Usa Socket.IO, con opzione per tentare la riconnessione automatica
+            ws = io(WS_SERVER_URL, { reconnection: true, reconnectionAttempts: 5 });
+            
+            ws.on('connect', () => {
+                gameState.myId = ws.id;
+                showToast("Connessione SERVER stabilita.");
+                // Se era in uno stato di lobby, prova a recuperare lo stato (opzionale)
+            });
 
-            try {
-                ws = new WebSocket(WS_SERVER_URL);
-                
-                ws.onopen = () => {
-                    console.log("[WS] Connesso al server.");
-                    showToast("Connessione stabilita. Pronto per la lobby.");
-                };
+            ws.on('disconnect', () => {
+                showToast("Connessione interrotta. Ritorno alla lobby.");
+                resetGame();
+            });
 
-                ws.onmessage = (event) => {
-                    const message = JSON.parse(event.data);
-                    handleServerMessage(message);
-                };
-
-                ws.onerror = (error) => {
-                    console.error("[WS] Errore di connessione:", error);
-                    showToast("ERRORE: Impossibile connettersi al server (backend offline).");
-                    // Qui gestiresti un fallback o un reset
-                };
-
-                ws.onclose = () => {
-                    console.log("[WS] Connessione chiusa.");
-                    showToast("Connessione persa. Ritorno alla lobby.");
-                    resetGame(); // Torna allo stato iniziale
-                };
-                
-            } catch (e) {
-                // Questo catch gestisce l'errore se l'URL non è valido o se la connessione fallisce prima di onopen/onerror
-                showToast("IMPOSSIBILE AVVIARE LA CONNESSIONE. Verifica che il server sia attivo.");
-                console.error("Errore critico di connessione WebSocket:", e);
-            }
+            ws.on('connect_error', (error) => {
+                console.error("[WS] Errore di connessione Socket.IO:", error);
+                showToast("ERRORE: Impossibile connettersi. Server offline o URL errato.");
+            });
+            
+            // --- GESTIONE MESSAGGI DAL SERVER ---
+            
+            ws.on('ROOM_CREATED', handleRoomCreated);
+            ws.on('JOINED_ROOM', handleJoinedRoom);
+            ws.on('PLAYER_UPDATE', handlePlayerUpdate);
+            ws.on('GAME_START', handleGameStart);
+            ws.on('SYNC_TIMER', handleSyncTimer);
+            ws.on('PHASE_CHANGE', handlePhaseChange);
+            ws.on('GAME_ENDED', handleGameEnded);
+            ws.on('ERROR', handleServerError);
         }
 
-        /**
-         * Invia un messaggio JSON al server.
-         * @param {Object} data - Dati da inviare.
-         */
-        function sendToServer(data) {
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify(data));
+        /** Invia un messaggio tramite Socket.IO. */
+        function sendToServer(type, data = {}) {
+            if (ws && ws.connected) {
+                ws.emit(type, data); 
             } else {
-                console.warn("Impossibile inviare: connessione WebSocket non pronta.", data);
                 showToast("Errore di rete. Riprova la connessione.");
             }
         }
         
-        /**
-         * Gestisce i messaggi ricevuti dal server.
-         * @param {Object} message - Messaggio dal server, con campo 'type'.
-         */
-        function handleServerMessage(message) {
-            console.log("[WS] Messaggio ricevuto:", message.type, message);
-
-            switch (message.type) {
-                case 'ROOM_CREATED':
-                    gameState.myId = message.playerId;
-                    gameState.roomCode = message.roomCode;
-                    gameState.isHost = true;
-                    updateLobbyState(message.players, "Sei l'HOST! Configura e avvia.");
-                    setupHostControls(message.numPlayers);
-                    switchScreen('configAttesa');
-                    break;
-                case 'JOINED_ROOM':
-                    gameState.myId = message.playerId;
-                    gameState.roomCode = message.roomCode;
-                    gameState.isHost = false;
-                    updateLobbyState(message.players, "Sei connesso. Attendi l'Host per iniziare.");
-                    switchScreen('configAttesa');
-                    break;
-                case 'PLAYER_UPDATE':
-                    // Aggiorna la lista giocatori quando qualcuno si unisce/lascia
-                    updateLobbyState(message.players, gameState.isHost ? "Configura e avvia." : "Attendi l'Host.");
-                    // L'host deve convalidare il pulsante di inizio
-                    if (gameState.isHost) {
-                        setupHostControls(message.players.length);
-                    }
-                    break;
-                case 'GAME_START':
-                    // Il gioco è iniziato, il server invia il ruolo e la parola a TUTTI
-                    gameState.parolaSegreta = message.word.toUpperCase();
-                    gameState.myRole = message.role;
-                    gameState.players = message.players; // Lista completa e finale dei giocatori
-
-                    // Rivelazione del ruolo individuale (passa allo schermo 3)
-                    startRoleRevealPhase(); 
-                    break;
-                case 'SYNC_TIMER':
-                    // Sincronizzazione del timer
-                    gameState.timer = message.timeRemaining;
-                    updateTimerDisplay();
-                    break;
-                case 'PHASE_CHANGE':
-                    // Passaggio automatico alla fase di discussione
-                    if (message.phase === 'DISCUSSION') {
-                        startDiscussionPhase();
-                    }
-                    // Aggiungere logica per 'VOTATION', 'END_GAME' ecc.
-                    break;
-                case 'GAME_ENDED':
-                    // Il server decide quando il gioco finisce e invia il risultato
-                    revealFinalResults(message.winningTeam, message.finalRoles);
-                    break;
-                case 'ERROR':
-                    showToast(`ERRORE SERVER: ${message.message}`);
-                    break;
-                default:
-                    console.warn("Messaggio server sconosciuto:", message);
+        // --- HANDLER DI MESSAGGI (DAL SERVER) ---
+        
+        function handleServerError(message) {
+            showToast(`ERRORE SERVER: ${message.message}`);
+            // Se l'errore è grave (es. codice non valido), torna alla lobby
+            if (gameState.statoCorrente !== 'lobby') {
+                 resetGame();
             }
         }
         
-        // --- LOGICA DI LOBBY ---
+        function handleRoomCreated(data) {
+            gameState.roomCode = data.roomCode;
+            gameState.myId = data.playerId;
+            gameState.isHost = true;
+            updateLobbyState(data.players, "Sei l'HOST! Configura e avvia.");
+            setupHostControls(data.players.length);
+            switchScreen('configAttesa');
+            showToast(`Stanza creata! Codice: ${data.roomCode}`);
+        }
+
+        function handleJoinedRoom(data) {
+            gameState.roomCode = data.roomCode;
+            gameState.myId = data.playerId;
+            gameState.isHost = false;
+            updateLobbyState(data.players, "Sei connesso. Attendi l'Host per iniziare.");
+            setupHostControls(data.players.length); // Nasconderà l'interfaccia host
+            switchScreen('configAttesa');
+            showToast(`Unito alla stanza ${data.roomCode}.`);
+        }
+
+        function handlePlayerUpdate(data) {
+            updateLobbyState(data.players, gameState.isHost ? "Configura e avvia." : "Attendi l'Host.");
+            if (gameState.isHost) {
+                setupHostControls(data.players.length);
+            }
+        }
+        
+        function handleGameStart(data) {
+            // Ricevuto il ruolo e la parola segreta
+            gameState.parolaSegreta = data.word;
+            gameState.myRole = data.role;
+            gameState.players = data.players; // Lista finale dei giocatori con ruoli non rivelati
+            
+            // Passa alla fase di rivelazione
+            startRoleRevealPhase(); 
+        }
+        
+        function handleSyncTimer(data) {
+            gameState.timer = data.timeRemaining;
+            updateTimerDisplay();
+        }
+        
+        function handlePhaseChange(data) {
+            if (data.phase === 'REVEAL') {
+                // Già gestito da GAME_START, ma utile per la sincronizzazione
+            } else if (data.phase === 'DISCUSSION') {
+                startDiscussionPhase();
+                showToast("Fase di discussione iniziata! Il tempo scorre...");
+            }
+        }
+        
+        function handleGameEnded(data) {
+            // Il server ha stabilito la fine del gioco
+            revealFinalResults(data.winningTeam, data.finalRoles);
+        }
+
+        // --- LOGICA DI LOBBY (Client-side) ---
 
         function handleCreateRoom() {
             gameState.myName = lobbyElementi.inputNome.value.trim();
             if (!gameState.myName) {
-                showToast("Inserisci un nome valido.");
-                return;
+                return showToast("Inserisci un nome valido.");
             }
-            
-            // Invia la richiesta di creazione stanza al server
-            sendToServer({
-                type: 'CREATE_ROOM',
-                playerName: gameState.myName
-            });
+            sendToServer('CREATE_ROOM', { playerName: gameState.myName });
             showToast("Richiesta di creazione stanza inviata...");
         }
 
         function handleJoinRoomRequest() {
             gameState.myName = lobbyElementi.inputNome.value.trim();
             if (!gameState.myName) {
-                showToast("Inserisci un nome valido.");
-                return;
+                return showToast("Inserisci un nome valido.");
             }
-            // Mostra il modale per inserire il codice
             lobbyElementi.modalCodice.style.display = 'flex';
         }
 
         function handleConfirmCode() {
             const code = lobbyElementi.inputCodice.value.trim().toUpperCase();
             if (code.length !== 4) {
-                showToast("Il codice deve essere di 4 caratteri.");
-                return;
+                return showToast("Il codice deve essere di 4 caratteri.");
             }
 
-            // Invia la richiesta di unione al server
-            sendToServer({
-                type: 'JOIN_ROOM',
-                playerName: gameState.myName,
-                roomCode: code
-            });
+            sendToServer('JOIN_ROOM', { playerName: gameState.myName, roomCode: code });
             
             lobbyElementi.modalCodice.style.display = 'none';
             showToast(`Tentativo di unione alla stanza ${code}...`);
@@ -652,14 +645,10 @@
         
         function handleCancelCode() {
             lobbyElementi.modalCodice.style.display = 'none';
-            lobbyElementi.inputCodice.value = ''; // Pulisce il campo
+            lobbyElementi.inputCodice.value = ''; 
         }
         
-        /**
-         * Aggiorna la lista dei giocatori e le info sulla stanza.
-         * @param {Array<Giocatore>} players - Lista dei giocatori connessi.
-         * @param {string} statusMessage - Messaggio di stato.
-         */
+        /** Aggiorna la lista dei giocatori e le info sulla stanza. */
         function updateLobbyState(players, statusMessage) {
             gameState.players = players;
             configElementi.codiceDisplay.textContent = gameState.roomCode || '----';
@@ -687,10 +676,7 @@
             });
         }
         
-        /**
-         * Configura la UI per l'Host.
-         * @param {number} numPlayers - Numero di giocatori attuali.
-         */
+        /** Configura la UI per l'Host. */
         function setupHostControls(numPlayers) {
             if (!gameState.isHost) {
                 configElementi.hostSection.style.display = 'none';
@@ -711,49 +697,46 @@
             configElementi.btnInizia.disabled = !canStart;
             configElementi.btnInizia.textContent = canStart ? "AVVIA PROTOCOLLO GIOCO" : "MIN. 3 GIOCATORI RICHIESTI";
 
-            if (canStart && !configElementi.btnInizia.dataset.listenerAdded) {
-                configElementi.btnInizia.addEventListener('click', handleHostStartGame);
-                configElementi.btnInizia.dataset.listenerAdded = true;
+            if (canStart) {
+                configElementi.btnInizia.onclick = handleHostStartGame;
             }
         }
 
-        /**
-         * L'Host invia al server il comando di iniziare il gioco.
-         */
+        /** L'Host invia al server il comando di iniziare il gioco. */
         function handleHostStartGame() {
             const numImpostori = parseInt(configElementi.numImpostoriHost.value, 10);
             if (isNaN(numImpostori) || numImpostori < 1) {
-                showToast("Seleziona un numero valido di Impostori.");
-                return;
+                return showToast("Seleziona un numero valido di Impostori.");
             }
 
-            sendToServer({
-                type: 'START_GAME',
+            sendToServer('START_GAME', {
                 roomCode: gameState.roomCode,
                 numImpostori: numImpostori
             });
             showToast("Invio del comando di avvio al server...");
         }
 
-        // --- FASE DI RIVELAZIONE RUOLO (Multiplayer) ---
+        // --- FASE DI RIVELAZIONE RUOLO ---
         
-        /**
-         * Gestisce la fase in cui il server ha inviato il ruolo.
-         */
         function startRoleRevealPhase() {
             switchScreen('rivelazione');
-            // Il ruolo è in gameState.myRole e la parola in gameState.parolaSegreta
-            rivelazioneElementi.btnMostraRuolo.addEventListener('click', showPersonalRole, { once: true });
+            rivelazioneElementi.btnMostraRuolo.onclick = showPersonalRole;
         }
         
-        /**
-         * Mostra il ruolo solo al giocatore che preme il pulsante.
-         */
         function showPersonalRole() {
             rivelazioneElementi.btnMostraRuolo.style.display = 'none';
             rivelazioneElementi.overlayRuoli.style.display = 'flex';
-            rivelazioneElementi.overlayRuoli.classList.add('attivo');
+            
+            // Animazione Glitch/Reveal
+            setTimeout(() => {
+                rivelazioneElementi.overlayRuoli.classList.add('attivo');
+                revealRoleContent();
+            }, 100); 
 
+            rivelazioneElementi.btnChiudiRivelazione.onclick = handleRoleAcceptance;
+        }
+        
+        function revealRoleContent() {
             // Reset classi
             rivelazioneElementi.ruoloTitolo.classList.remove('role-cittadino', 'role-impostore');
             rivelazioneElementi.parolaRivelata.style.color = varToCss('--colore-testo');
@@ -771,21 +754,13 @@
                 rivelazioneElementi.parolaRivelata.textContent = '[ DATI CRIPTATI ]';
                 rivelazioneElementi.parolaRivelata.style.color = varToCss('--colore-accento-impostore');
             }
-            
-            rivelazioneElementi.btnChiudiRivelazione.addEventListener('click', handleRoleAcceptance, { once: true });
         }
         
-        /**
-         * Il giocatore conferma di aver visto il proprio ruolo.
-         */
         function handleRoleAcceptance() {
             rivelazioneElementi.overlayRuoli.classList.remove('attivo');
-            // Invia notifica al server (simulato)
-            // sendToServer({ type: 'ROLE_ACCEPTED', playerId: gameState.myId, roomCode: gameState.roomCode }); 
-            showToast("Ruolo accettato. Preparati per la discussione...");
-            
-            // In un gioco reale, si aspetterebbe il messaggio PHAS_CHANGE dal server
-            // che viene inviato solo quando TUTTI i giocatori hanno accettato.
+            // Nota: In un gioco reale invieresti ROLE_ACCEPTED al server, ma per semplicità
+            // ci affidiamo al timer globale del server per passare alla fase DISCUSSION.
+            showToast("Ruolo memorizzato. In attesa della discussione...");
         }
 
         // --- FASE DI GIOCO (Discussione Sincronizzata) ---
@@ -793,53 +768,26 @@
         function startDiscussionPhase() {
             switchScreen('gioco');
             
-            // La parola è già stata impostata da GAME_START
+            // Solo i cittadini vedono la parola reale, l'impostore vede un messaggio criptato
             giocoElementi.parolaGioco.textContent = (gameState.myRole === 'Cittadino') 
                 ? gameState.parolaSegreta 
-                : 'PAROLA NON RILEVATA'; // Solo i cittadini vedono la parola, l'impostore vede un placeholder
+                : 'PAROLA NON RILEVATA'; 
             
-            // Il timer è gestito e sincronizzato dal server (messaggio SYNC_TIMER)
-            // L'interfaccia si limita a visualizzare i dati ricevuti
-
-            giocoElementi.btnVota.addEventListener('click', handleStartVoting, { once: true });
+            giocoElementi.btnVota.onclick = handleStartVoting;
         }
         
-        /**
-         * Aggiorna la visualizzazione del timer (in base ai dati del server).
-         */
-        function updateTimerDisplay() {
-            const minuti = Math.floor(gameState.timer / 60);
-            const secondi = gameState.timer % 60;
-            const displayMinuti = String(minuti).padStart(2, '0');
-            const displaySecondi = String(secondi).padStart(2, '0');
-            giocoElementi.timerGioco.textContent = `${displayMinuti}:${displaySecondi}`;
-            
-            // Questo codice non ha bisogno di un intervallo locale se il server invia SYNC_TIMER ogni secondo.
-        }
-
-        /**
-         * Avvia la votazione (richiesta al server).
-         */
+        /** Avvia la votazione (richiesta al server). */
         function handleStartVoting() {
-            // Invia la richiesta di votazione. Solo l'host o un voto unanime avvia la votazione.
-            sendToServer({
-                type: 'REQUEST_VOTE',
+            sendToServer('REQUEST_VOTE', {
                 roomCode: gameState.roomCode,
                 playerId: gameState.myId
             });
-            showToast("Richiesta votazione inviata. In attesa del server...");
-            
-            // In un gioco reale, il server passerebbe a uno schermo di votazione
-            // switchScreen('votazione'); 
+            showToast("Richiesta votazione inviata al server.");
         }
 
         // --- FASE DI FINE GIOCO ---
 
-        /**
-         * Ritorna alla fase di fine gioco e rivela tutti i ruoli.
-         * @param {string} winningTeam - Il team vincente ('Cittadini' o 'Impostori').
-         * @param {Array<Object>} finalRoles - Lista completa dei ruoli dal server.
-         */
+        /** Ritorna alla fase di fine gioco e rivela tutti i ruoli. */
         function revealFinalResults(winningTeam, finalRoles) {
             switchScreen('fine');
 
@@ -858,31 +806,25 @@
                 fineElementi.listaRisultati.appendChild(li);
             });
             
-            fineElementi.btnNuovaPartita.addEventListener('click', resetGame);
+            fineElementi.btnNuovaPartita.onclick = resetGame;
         }
 
-        /**
-         * Resetta lo stato del gioco e torna alla schermata iniziale (lobby).
-         */
+        /** Resetta lo stato del gioco e torna alla schermata iniziale (lobby). */
         function resetGame() {
-            // Pulisce lo stato locale e i listener
-            gameState.myId = null;
+            // Pulisce lo stato locale
             gameState.myRole = null;
             gameState.isHost = false;
             gameState.roomCode = null;
             gameState.players = [];
-            
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                // Notifica il server che stiamo uscendo dalla stanza (simulato)
-                // ws.send(JSON.stringify({ type: 'LEAVE_ROOM', playerId: gameState.myId }));
+            gameState.parolaSegreta = null;
+            gameState.timer = 300;
+
+            // Riconnette al server se la connessione è stata persa
+            if (!ws || !ws.connected) {
+                initializeWebSocket();
             }
             
-            // Rimuovi vecchi listener (solo quelli che non sono once)
-            configElementi.btnInizia.removeEventListener('click', handleHostStartGame); 
-            configElementi.btnInizia.dataset.listenerAdded = false;
-
-            // Pulisci l'interfaccia
-            lobbyElementi.inputNome.value = gameState.myName; 
+            // Pulisci l'interfaccia e torna alla lobby
             switchScreen('lobby');
         }
 
@@ -890,19 +832,18 @@
         
         function init() {
             // 1. Inizializza i listener per la lobby
-            lobbyElementi.btnCrea.addEventListener('click', handleCreateRoom);
-            lobbyElementi.btnUnisciti.addEventListener('click', handleJoinRoomRequest);
-            lobbyElementi.btnConfermaCodice.addEventListener('click', handleConfirmCode);
-            lobbyElementi.btnAnnullaCodice.addEventListener('click', handleCancelCode);
+            lobbyElementi.btnCrea.onclick = handleCreateRoom;
+            lobbyElementi.btnUnisciti.onclick = handleJoinRoomRequest;
+            lobbyElementi.btnConfermaCodice.onclick = handleConfirmCode;
+            lobbyElementi.btnAnnullaCodice.onclick = handleCancelCode;
 
-            // 2. Inizializza la connessione WebSocket (Necessaria per la logica multiplayer)
+            // 2. Inizializza la connessione Socket.IO
             initializeWebSocket(); 
             
-            // Inserimento simulato del nome (per testare la creazione/join)
-            lobbyElementi.inputNome.value = "Giocatore" + Math.floor(Math.random() * 100);
+            // Pre-compila il nome per accelerare i test
+            lobbyElementi.inputNome.value = "Giocatore_" + Math.floor(Math.random() * 999);
             
             console.log("Applicazione Gioco dell'Impostore (Multiplayer Client) avviata.");
-            showToast("Connessione in corso...");
         }
 
         document.addEventListener('DOMContentLoaded', init);
